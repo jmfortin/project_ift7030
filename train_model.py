@@ -4,16 +4,14 @@ import sys
 from datetime import datetime
 from os.path import dirname, join, realpath
 
-sys.path.append(join(dirname(__file__), ".."))
-
 import torch
 import wandb
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint, RichProgressBar
 from lightning.pytorch.loggers import WandbLogger
 
-from neural_network.datamodules import TerrainPatchDataModule
-from neural_network.networks_patch import TerrainPatchResNet, TerrainPatchSwin
+from datamodules import TerrainPatchDataModule
+from networks import TerrainPatchResNet, TerrainPatchSwin
 
 ############# PARAMETERS #############
 
