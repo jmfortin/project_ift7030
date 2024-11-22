@@ -60,7 +60,16 @@ class TerrainPatchResNet(TerrainPatchNet):
 
         # TODO - Add the heads for the model
         # It should predict a spectrogram of the audio signal
+        num_features = self.model.fc.in_features
+        self.model.fc = torch.nn.Identity()
 
+        self.heads = torch.nn.ModuleList([
+            torch.nn.Sequential(
+                torch.nn.Linear(num_features, 512),
+                torch.nn.ReLU(),
+                torch.nn.Linear(512, image_size * image_size)
+            )
+        ])
         self.save_hyperparameters()
 
     def forward(self, x):
@@ -77,7 +86,16 @@ class TerrainPatchSwin(TerrainPatchNet):
 
         # TODO - Add the heads for the model
         # It should predict a spectrogram of the audio signal
+        num_features = self.model.head.in_features
+        self.model.head = torch.nn.Identity()
 
+        self.heads = torch.nn.ModuleList([
+            torch.nn.Sequential(
+                torch.nn.Linear(num_features, 512),
+                torch.nn.ReLU(),
+                torch.nn.Linear(512, image_size * image_size)
+            )
+            ])
         self.save_hyperparameters()
 
     def forward(self, x):
