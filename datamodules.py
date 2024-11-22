@@ -116,7 +116,11 @@ class TerrainPatchDataset(Dataset):
             image = augmented["image"]
         
         # TODO: Generate labels folder (spectrograms)
-        label = None
+        label_file = join(self.labels_folder, f"{folder_id}.png")
+        if not exists(label_file):
+            raise FileNotFoundError(f"Label file {label_file} not found")
+
+        label = cv2.imread(label_file, cv2.IMREAD_GRAYSCALE)
 
         return image, label
     
