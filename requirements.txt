@@ -5,6 +5,7 @@ opencv-python
 matplotlib
 pandas
 pytorch-lightning
+rich
 scikit-learn
 torch
 torchaudio

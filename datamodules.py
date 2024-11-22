@@ -4,12 +4,10 @@ from os.path import exists, join
 
 import albumentations as A
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import torch
 from albumentations.pytorch import ToTensorV2
-from lightning.pytorch import LightningDataModule
+from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Dataset, Subset
 
@@ -94,6 +92,7 @@ class TerrainPatchDataset(Dataset):
     def __init__(self, data_folder, transform=None, distance_bounds=[0, 10]):
         self.patches_folder = os.path.join(data_folder, "patches")
         self.labels_folder = os.path.join(data_folder, "labels")
+        self.labels = pd.read_csv(os.path.join(self.labels_folder, "labels.csv"), header=None)
         self.transform = transform
         self.distance_bounds = distance_bounds
         self.ids = os.listdir(self.patches_folder)
@@ -115,12 +114,7 @@ class TerrainPatchDataset(Dataset):
             augmented = self.transform(image=image)
             image = augmented["image"]
         
-        # TODO: Generate labels folder (spectrograms)
-        label_file = join(self.labels_folder, f"{folder_id}.png")
-        if not exists(label_file):
-            raise FileNotFoundError(f"Label file {label_file} not found")
-
-        label = cv2.imread(label_file, cv2.IMREAD_GRAYSCALE)
+        label = self.labels.iloc[:, idx].values
 
         return image, label
     

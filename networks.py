@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from lightning.pytorch import LightningModule
+from pytorch_lightning import LightningModule
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torchvision.models import ResNet18_Weights, resnet18, swin_v2_t
@@ -20,25 +20,25 @@ class TerrainPatchNet(LightningModule):
 
     def training_step(self, batch, batch_idx):
         images, targets = batch
-        outputs = self.forward(images)
+        outputs = self.forward(images.half())
 
-        loss = F.mse_loss(outputs, targets.float())
+        loss = F.mse_loss(outputs, targets.float(), reduction="mean")
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         images, targets = batch
-        outputs = self.forward(images)
+        outputs = self.forward(images.half())
 
-        loss = F.mse_loss(outputs, targets.float(), reduction="none")
+        loss = F.mse_loss(outputs, targets.float(), reduction="mean")
         self.log("val_loss", loss, prog_bar=True)
         return loss
 
     def test_step(self, batch, batch_idx):
         images, targets = batch
-        outputs = self.forward(images)
+        outputs = self.forward(images.half())
 
-        loss = F.mse_loss(outputs, targets.float(), reduction="none")
+        loss = F.mse_loss(outputs, targets.float(), reduction="mean")
         self.log("test_loss", loss, prog_bar=False)
         return loss
 
@@ -53,51 +53,42 @@ class TerrainPatchNet(LightningModule):
 
 class TerrainPatchResNet(TerrainPatchNet):
 
-    def __init__(self, image_size=64, output_size=1, lr=0.0001):
+    def __init__(self, output_size=1, lr=0.0001):
         super(TerrainPatchResNet, self).__init__(lr=lr)
 
         self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
 
-        # TODO - Add the heads for the model
-        # It should predict a spectrogram of the audio signal
+        # Predict a spectrogram of the audio signal
         num_features = self.model.fc.in_features
-        self.model.fc = torch.nn.Identity()
-
-        self.heads = torch.nn.ModuleList([
-            torch.nn.Sequential(
-                torch.nn.Linear(num_features, 512),
-                torch.nn.ReLU(),
-                torch.nn.Linear(512, image_size * image_size)
-            )
-        ])
+        self.model.fc  = torch.nn.Sequential(
+            torch.nn.Linear(num_features, 512),
+            torch.nn.ReLU(),
+            torch.nn.Linear(512, output_size)
+        )
         self.save_hyperparameters()
 
     def forward(self, x):
         x = self.model(x)
-        return torch.cat([head(x) for head in self.heads], dim=1)
+        return x
 
 
 class TerrainPatchSwin(TerrainPatchNet):
 
-    def __init__(self, image_size=64, output_size=1, lr=0.0001):
+    def __init__(self, output_size=1, lr=0.0001):
         super(TerrainPatchSwin, self).__init__(lr=lr)
 
         self.model = swin_v2_t(weights="IMAGENET1K_V1")
 
-        # TODO - Add the heads for the model
-        # It should predict a spectrogram of the audio signal
+        # Predict a spectrogram of the audio signal
         num_features = self.model.head.in_features
-        self.model.head = torch.nn.Identity()
+        self.model.head = torch.nn.Sequential(
+            torch.nn.Linear(num_features, 512),
+            torch.nn.ReLU(),
+            torch.nn.Linear(512, output_size)
+        )
 
-        self.heads = torch.nn.ModuleList([
-            torch.nn.Sequential(
-                torch.nn.Linear(num_features, 512),
-                torch.nn.ReLU(),
-                torch.nn.Linear(512, image_size * image_size)
-            )
-            ])
         self.save_hyperparameters()
 
     def forward(self, x):
         x = self.model(x)
-        return torch.cat([head(x) for head in self.heads], dim=1)
+        return x

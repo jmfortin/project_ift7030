@@ -6,9 +6,9 @@ from os.path import dirname, join, realpath
 
 import torch
 import wandb
-from lightning.pytorch import Trainer
-from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint, RichProgressBar
-from lightning.pytorch.loggers import WandbLogger
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint, RichProgressBar
+from pytorch_lightning.loggers import WandbLogger
 
 from datamodules import TerrainPatchDataModule
 from networks import TerrainPatchResNet, TerrainPatchSwin
@@ -24,16 +24,17 @@ NUM_FOLDS = 1  # Number of folds for cross-validation
 parser = argparse.ArgumentParser(description="Train model for audio prediction from terrain patches.")
 parser.add_argument("--folds", type=int, help="Number of folds for cross-validation.", default=NUM_FOLDS)
 parser.add_argument("--mindist", type=float, help="Minimum distance from the robot.", default=0)
-parser.add_argument("--maxdist", type=float, help="Maximum distance from the robot.", default=5)
+parser.add_argument("--maxdist", type=float, help="Maximum distance from the robot.", default=3)
 parser.add_argument("--project", type=str, help="WandB project name.", default=PROJECT_NAME)
 args = parser.parse_args()
 
-DATA_FOLDER = join(SCRIPT_DIR, "..", "data")
+DATA_FOLDER = join(SCRIPT_DIR, "data", "sequence1")
 INPUT_SIZE = 256
+OUTPUT_SIZE = 1025
 BATCH_SIZE = 256
 NUM_EPOCHS = 100
 PATIENCE = 100  # Set to NUM_EPOCHS to disable early stopping
-LEARNING_RATE = 0.00005
+LEARNING_RATE = 0.0005
 
 MODEL_TYPE = "ResNet"  # Choose between "CNN", "ResNet" and "Swin"
 DATA_SPLIT = 10  # Number of parts to split the dataset into
@@ -77,9 +78,9 @@ if __name__ == "__main__":
 
         # Create an instance of the selected model
         if MODEL_TYPE == "ResNet":
-            model = TerrainPatchResNet(image_size=INPUT_SIZE, lr=LEARNING_RATE)
+            model = TerrainPatchResNet(output_size=OUTPUT_SIZE, lr=LEARNING_RATE)
         elif MODEL_TYPE == "Swin":
-            model = TerrainPatchSwin(image_size=INPUT_SIZE, lr=LEARNING_RATE)
+            model = TerrainPatchSwin(output_size=OUTPUT_SIZE, lr=LEARNING_RATE)
         else:
             raise ValueError("Invalid model type.")
 
