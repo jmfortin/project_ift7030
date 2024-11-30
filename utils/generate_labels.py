@@ -7,10 +7,11 @@ import pandas as pd
 
 ############################ PARAMS ############################
   
-DATA_FOLDER = "./data/sequence1"
-POI_FILE = os.path.join(DATA_FOLDER, "points_of_interest.csv")
+DATA_FOLDER = "./data/sequence6"
+POI_FILE = os.path.join(DATA_FOLDER, "trajectory.csv")
+AUDIO_FILE = os.path.join(DATA_FOLDER, "audio.wav")
 
-SAMPLE_FREQ = 5000
+SAMPLE_FREQ = 4000
 N_FFT = 2048
 HOP_LENGTH = 512
 WIN_LENGTH = 2048
@@ -22,13 +23,14 @@ SAVE = True
 
 ################################################################
 
-audio_file = os.path.join(DATA_FOLDER, "audio2.wav")
-wav, sample_rate = librosa.load(audio_file, sr=SAMPLE_FREQ)
+wav, sample_rate = librosa.load(AUDIO_FILE, sr=SAMPLE_FREQ)
 time = np.arange(0, len(wav)) / sample_rate
 
 print(f"Signal shape: {wav.shape}")
 print(f"Sampling rate: {sample_rate} Hz")
+print(f"Duration: {len(wav) / sample_rate} s")
 
+print(f"Generating spectrogram...")
 spec = librosa.stft(
     wav, 
     n_fft=N_FFT, 
@@ -40,6 +42,8 @@ spec = librosa.stft(
 spec_db = librosa.amplitude_to_db(np.abs(spec), ref=np.max)
 
 if DISPLAY:
+    print(f"Displaying waveform and spectrogram...")
+
     # Plot waveform and spectrogram
     fig, axs = plt.subplots(2, 1, figsize=(15, 10))
     axs[0].plot(time, wav)
@@ -57,6 +61,9 @@ if DISPLAY:
     plt.show()
 
 if SAVE:
+    print(f"Saving spectrogram and labels...")
+
+    os.makedirs(os.path.join(DATA_FOLDER, "labels"), exist_ok=True)
     spec_file = os.path.join(DATA_FOLDER, "labels/spectrogram.csv")
     labels_file = os.path.join(DATA_FOLDER, "labels/labels.csv")
 
@@ -70,3 +77,5 @@ if SAVE:
     indices = [np.argmin(np.abs(time_row - timestamp)) for timestamp in points_of_interest["timestamp"]]
     labels = spec_db[:, indices]
     pd.DataFrame(labels).to_csv(labels_file, index=False, header=False)
+
+print("All done!")

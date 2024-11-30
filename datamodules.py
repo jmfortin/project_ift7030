@@ -16,7 +16,7 @@ class TerrainPatchDataModule(LightningDataModule):
     def __init__(
         self,
         input_size,
-        data_folder,
+        data_folders,
         batch_size,
         distance_bounds=None,
         split_ratio=10,
@@ -26,7 +26,7 @@ class TerrainPatchDataModule(LightningDataModule):
         """
         Args:
             input_size: The size of the input images
-            data_folder: The folder containing the dataset
+            data_folders: The folders containing the dataset
             batch_size: The batch size to use for training
             distance_bounds: The min-max distance to consider for the patches (default=None)
             split_ratio: The number of parts to split the dataset into (default=10)
@@ -36,7 +36,7 @@ class TerrainPatchDataModule(LightningDataModule):
         """
 
         super().__init__()
-        self.data_folder = data_folder
+        self.data_folders = data_folders
         self.batch_size = batch_size
         self.split_ratio = split_ratio
         self.split_seed = split_seed
@@ -59,7 +59,7 @@ class TerrainPatchDataModule(LightningDataModule):
             ]
         )
 
-        self.full_dataset = TerrainPatchDataset(self.data_folder, self.train_transform, self.distance_bounds)
+        self.full_dataset = TerrainPatchDataset(self.data_folders, self.train_transform, self.distance_bounds)
         self.kfolds = KFold(n_splits=self.split_ratio, shuffle=True, random_state=self.split_seed)
         self.splits = [split for split in self.kfolds.split(self.full_dataset)]
         print(f"Dataset size: {len(self.full_dataset)}")
@@ -89,48 +89,56 @@ class TerrainPatchDataModule(LightningDataModule):
 
 
 class TerrainPatchDataset(Dataset):
-    def __init__(self, data_folder, transform=None, distance_bounds=[0, 10]):
-        self.patches_folder = os.path.join(data_folder, "patches")
-        self.labels_folder = os.path.join(data_folder, "labels")
-        self.labels = pd.read_csv(os.path.join(self.labels_folder, "labels.csv"), header=None)
+    def __init__(self, data_folders, transform=None, distance_bounds=[0, 10]):
         self.transform = transform
         self.distance_bounds = distance_bounds
-        self.ids = os.listdir(self.patches_folder)
+        self.image_paths = []
+        self.labels = []
 
+        for folder in data_folders:
+            print(f"Loading data from folder {folder}")
+            self.load_data_from_folder(folder)
+            
     def __len__(self):
-        return len(self.ids)
+        return len(self.labels)
 
     def __getitem__(self, idx):
-        folder_id = self.ids[idx]
-        folder_path = join(self.patches_folder, str(folder_id))
-
-        # Pick a random valid image from the folder
-        valid_files = self.get_valid_files(folder_path)
-        random_idx = np.random.randint(len(valid_files))
-        image_file = join(folder_path, valid_files[random_idx])
-        image = cv2.imread(image_file)
-
+        image = cv2.imread(self.image_paths[idx])   
         if self.transform:
             augmented = self.transform(image=image)
             image = augmented["image"]
         
-        label = self.labels.iloc[:, idx].values
-
+        label = self.labels[idx]
         return image, label
     
-    def get_valid_files(self, folder_path):
+    def load_data_from_folder(self, folder_path):
+        labels = np.loadtxt(join(folder_path, "labels", "labels.csv"), delimiter=",")
+        patches_folder = join(folder_path, "patches")
+        for data_folder in os.listdir(patches_folder):
+            id = int(data_folder)
+            full_path = join(patches_folder, data_folder)
+            if not exists(full_path) or len(os.listdir(full_path)) == 0:
+                raise ValueError(f"Folder {full_path} is empty")
+            closest_patch = self.get_closest_patch(full_path)
+            if closest_patch:
+                self.image_paths.append(join(full_path, closest_patch))
+                self.labels.append(labels[:, id])
+    
+    def get_closest_patch(self, folder_path):
         if not exists(folder_path) or len(os.listdir(folder_path)) == 0:
             return []
         if self.distance_bounds is None:
             return os.listdir(folder_path)
 
-        valid_files = []
+        min_dist = 10.0
+        closest_patch = None
         pattern = re.compile(r"_\d+\.\d+")
         for file in os.listdir(folder_path):
             match = pattern.search(file)
             if file.endswith(".png") and match:
                 distance = float(match.group()[1:])
-                if self.distance_bounds[0] <= distance <= self.distance_bounds[1]:
-                    valid_files.append(file)
+                if distance < min_dist:
+                    min_dist = distance
+                    closest_patch = file
 
-        return valid_files
+        return closest_patch

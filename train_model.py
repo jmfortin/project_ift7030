@@ -28,7 +28,14 @@ parser.add_argument("--maxdist", type=float, help="Maximum distance from the rob
 parser.add_argument("--project", type=str, help="WandB project name.", default=PROJECT_NAME)
 args = parser.parse_args()
 
-DATA_FOLDER = join(SCRIPT_DIR, "data", "sequence1")
+DATA_FOLDERS = [
+    join(SCRIPT_DIR, "data", "sequence1"),
+    join(SCRIPT_DIR, "data", "sequence2"),
+    join(SCRIPT_DIR, "data", "sequence3"),
+    join(SCRIPT_DIR, "data", "sequence4"),
+    join(SCRIPT_DIR, "data", "sequence5"),
+    join(SCRIPT_DIR, "data", "sequence6"),
+]
 INPUT_SIZE = 256
 OUTPUT_SIZE = 1025
 BATCH_SIZE = 256
@@ -54,7 +61,7 @@ if __name__ == "__main__":
     # Load the dataset
     datamodule = TerrainPatchDataModule(
         input_size=INPUT_SIZE,
-        data_folder=DATA_FOLDER,
+        data_folders=DATA_FOLDERS,
         batch_size=BATCH_SIZE,
         distance_bounds=[args.mindist, args.maxdist],
         split_ratio=DATA_SPLIT,
