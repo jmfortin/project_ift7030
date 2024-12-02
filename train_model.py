@@ -16,7 +16,7 @@ from networks import TerrainPatchResNet, TerrainPatchSwin
 ############# PARAMETERS #############
 
 SCRIPT_DIR = dirname(realpath(__file__))
-SAVE_PATH = join(SCRIPT_DIR, "..", "output", "training")
+SAVE_PATH = join(SCRIPT_DIR, "output", "training")
 
 PROJECT_NAME = "ift7030"
 NUM_FOLDS = 1  # Number of folds for cross-validation
@@ -63,7 +63,6 @@ if __name__ == "__main__":
         input_size=INPUT_SIZE,
         data_folders=DATA_FOLDERS,
         batch_size=BATCH_SIZE,
-        distance_bounds=[args.mindist, args.maxdist],
         split_ratio=DATA_SPLIT,
         split_seed=SEED,
     )

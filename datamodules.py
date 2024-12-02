@@ -126,9 +126,9 @@ class TerrainPatchDataset(Dataset):
     
     def get_closest_patch(self, folder_path):
         if not exists(folder_path) or len(os.listdir(folder_path)) == 0:
-            return []
-        if self.distance_bounds is None:
-            return os.listdir(folder_path)
+            return None
+        # if self.distance_bounds is None:
+        #     return os.listdir(folder_path)
 
         min_dist = 10.0
         closest_patch = None

@@ -7,10 +7,14 @@ import pandas as pd
 
 ############################ PARAMS ############################
   
-DATA_FOLDER = "./data/sequence6"
+DATA_FOLDER = "./data/sequence1"
 POI_FILE = os.path.join(DATA_FOLDER, "trajectory.csv")
 AUDIO_FILE = os.path.join(DATA_FOLDER, "audio.wav")
 
+SAMPLE_FREQ = 4096
+N_FFT = 4096
+HOP_LENGTH = 1024
+WIN_LENGTH = 4096
 SAMPLE_FREQ = 4000
 N_FFT = 2048
 HOP_LENGTH = 512
@@ -40,6 +44,8 @@ spec = librosa.stft(
     center=CENTER,
 )
 spec_db = librosa.amplitude_to_db(np.abs(spec), ref=np.max)
+
+print(f"Spectrogram shape: {spec_db.shape}")
 
 if DISPLAY:
     print(f"Displaying waveform and spectrogram...")
