@@ -10,17 +10,18 @@ from albumentations.pytorch import ToTensorV2
 from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import KFold
 from torch.utils.data import DataLoader, Dataset, Subset
-from utils import remove_principal_components, generate_spectrogram, load_audio
+from utils import remove_principal_components, generate_spectrogram, load_audio, lowpass_filter
 
 
 class AudioVisualDataModule(LightningDataModule):
     def __init__(
         self,
         input_size,
+        batch_size,
         data_folders,
         sample_freq, 
-        pca_drop,
-        batch_size,
+        lowpass_freq=None,
+        pca_drop=0,
         split_ratio=10,
         split_seed=42,
         k=1,
@@ -30,6 +31,7 @@ class AudioVisualDataModule(LightningDataModule):
             input_size: The size of the input images
             data_folders: The folders containing the dataset
             sample_freq: The sample frequency of the audio files
+            lowpass_freq: The frequency to use for the low-pass (ignore if None)
             pca_drop: The number of principal components to remove from the labels
             batch_size: The batch size to use for training
             split_ratio: The number of parts to split the dataset into (default=10)
@@ -50,7 +52,7 @@ class AudioVisualDataModule(LightningDataModule):
             ]
         )
 
-        self.full_dataset = AudioVisualDataset(data_folders, sample_freq, pca_drop, transform)
+        self.full_dataset = AudioVisualDataset(data_folders, sample_freq, lowpass_freq, pca_drop, transform)
         self.kfolds = KFold(n_splits=split_ratio, shuffle=True, random_state=split_seed)
         self.splits = [split for split in self.kfolds.split(self.full_dataset)]
         print(f"Dataset size: {len(self.full_dataset)}")
@@ -67,7 +69,7 @@ class AudioVisualDataModule(LightningDataModule):
         train_indices, val_indices = self.splits[self.k]
         self.train_data = Subset(self.full_dataset, train_indices)
         self.val_data = Subset(self.full_dataset, val_indices)
-        self.test_data = Subset(self.full_dataset, np.arange(len(self.full_dataset)))
+        self.test_data = Subset(self.full_dataset, val_indices)
 
     def train_dataloader(self):
         return DataLoader(self.train_data, batch_size=self.batch_size, shuffle=True, num_workers=os.cpu_count() or 1)
@@ -81,17 +83,20 @@ class AudioVisualDataModule(LightningDataModule):
 
 class AudioVisualDataset(Dataset):
 
-    def __init__(self, data_folders, sample_freq, pca_drop, transform=None):
+    def __init__(self, data_folders, sample_freq, lowpass_freq=300, pca_drop=0, transform=None):
         """
         Args:
             data_folders: The folders containing the dataset
             sample_freq: The sample frequency of the audio files
+            lowpass_freq: The frequency to use for the low-pass (ignore if None)
             pca_drop: The number of principal components to remove from the labels
             transform: The transformations to apply to the images
         """
 
         self.transform = transform
         self.sample_freq = sample_freq
+        self.lowpass_freq = lowpass_freq
+        self.pca_drop = pca_drop
         self.image_paths = []
         self.labels = []
 
@@ -101,7 +106,8 @@ class AudioVisualDataset(Dataset):
             self.image_paths.extend(inputs)
             self.labels.append(labels)
         
-        self.process_labels(pca_drop)
+        print("Processing labels...")
+        self.process_labels()
 
 
     def __len__(self):
@@ -165,6 +171,8 @@ class AudioVisualDataset(Dataset):
         audio_file = join(folder_path, "audio.wav")
         trajectory_file = join(folder_path, "trajectory.csv")
         wav = load_audio(audio_file, self.sample_freq)
+        if self.lowpass_freq:
+            wav = lowpass_filter(wav, self.lowpass_freq, self.sample_freq)
         trajectory = pd.read_csv(trajectory_file).iloc[valid_ids]
 
         spec_db = generate_spectrogram(wav, self.sample_freq, self.sample_freq//4, self.sample_freq, db=True)
@@ -175,11 +183,11 @@ class AudioVisualDataset(Dataset):
         return spec_db[:, indices]
     
 
-    def process_labels(self, pca_drop=0):
+    def process_labels(self):
 
         self.labels = np.hstack(self.labels)
-        if pca_drop > 0:
-            self.labels = remove_principal_components(self.labels, pca_drop)
+        if self.pca_drop > 0:
+            self.labels = remove_principal_components(self.labels, self.pca_drop)
 
         # Display the labels as a spectrogram
         import librosa.display

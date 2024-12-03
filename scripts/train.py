@@ -13,6 +13,8 @@ from datamodules import AudioVisualDataModule
 from networks import AudioVisualResNet, AudioVisualSwin
 import yaml
 
+from utils import display_spectograms, inference_on_datamodule
+
 ############# PARAMETERS #############
 
 SCRIPT_DIR = dirname(realpath(__file__))
@@ -43,7 +45,8 @@ BATCH_SIZE = 128
 NUM_EPOCHS = 100
 PATIENCE = 5  # Set to NUM_EPOCHS to disable early stopping
 LEARNING_RATE = 0.001
-PCA_DROP = 0
+LOWPASS_FREQ = 300
+PCA_DROP = 1
 
 MODEL_TYPE = "ResNet"  # Choose between "CNN", "ResNet" and "Swin"
 DATA_SPLIT = 10  # Number of parts to split the dataset into
@@ -53,8 +56,11 @@ SEED = 42  # Seed for the random split
 
 if __name__ == "__main__":
 
-    # Initialize Weights & Biases
+    # Check if CUDA is available
     torch.set_float32_matmul_precision("medium")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Initialize Weights & Biases
     os.environ["WANDB_SILENT"] = "true"
     wandb.require("core")
 
@@ -65,6 +71,7 @@ if __name__ == "__main__":
         input_size=INPUT_SIZE,
         data_folders=DATA_FOLDERS,
         sample_freq=SAMPLE_FREQ,
+        lowpass_freq=LOWPASS_FREQ,
         pca_drop=PCA_DROP,
         batch_size=BATCH_SIZE,
         split_ratio=DATA_SPLIT,
@@ -85,6 +92,7 @@ if __name__ == "__main__":
         "batch_size": BATCH_SIZE,
         "learning_rate": LEARNING_RATE,
         "pca_drop": PCA_DROP,
+        "lowpass_freq": LOWPASS_FREQ,
         "model_type": MODEL_TYPE,
         "data_split": DATA_SPLIT,
         "seed": SEED,
@@ -143,7 +151,15 @@ if __name__ == "__main__":
         trainer.fit(model, datamodule)
 
         # Evaluate the model
-        metrics = trainer.test(model, datamodule)
+        # metrics = trainer.test(model, datamodule)
+        labels, outputs = inference_on_datamodule(model, datamodule, device)
+
+        # Plot the output and label and save the plots
+        display_spectograms(
+            specs=[labels, outputs], sample_freq=details["sample_freq"], 
+            titles=["Labels", "Predictions"], 
+            save_path=join(fold_save_folder, "predictions.png")
+        )
 
         # Save the model as a TorchScript file
         best_checkpoint = torch.load(join(fold_save_folder, "model.ckpt"))
