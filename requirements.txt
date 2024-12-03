@@ -1,4 +1,5 @@
 albumentations
+demucs
 librosa
 numpy
 opencv-python
