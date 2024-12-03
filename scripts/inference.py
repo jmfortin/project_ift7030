@@ -3,7 +3,7 @@ from os.path import dirname, join, realpath
 sys.path.append(join(dirname(__file__), ".."))
 
 import torch
-from datamodules import TerrainPatchDataModule
+from datamodules import AudioVisualDataModule
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -15,8 +15,9 @@ MODEL_PATH = join(SCRIPT_DIR, "..", "output", "training", "2024-11-30_16-34-09",
 DATA_FOLDERS = [
     join(SCRIPT_DIR, "..", "data", "sequence2"),
 ]
+SAMPLE_FREQ = 4096
 INPUT_SIZE = 256
-BATCH_SIZE = 256
+BATCH_SIZE = 1024
 DATA_SPLIT = 10  # Number of parts to split the dataset into
 SEED = 42  # Seed for the random split
 
@@ -29,11 +30,11 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize the test datamodules
-    test_datamodule = TerrainPatchDataModule(
+    test_datamodule = AudioVisualDataModule(
         input_size=INPUT_SIZE,
         data_folders=DATA_FOLDERS,
+        sample_freq=SAMPLE_FREQ,
         batch_size=BATCH_SIZE,
-        distance_bounds=None,
         split_ratio=10,
         split_seed=SEED,
     )

@@ -20,8 +20,8 @@ def highpass_filter(signal, cutoff, fs, order=5):
     return filtered_signal
 
 # Charger un fichier audio
-fs, audio = wavfile.read("audio.wav")  # Remplacez "audio.wav" par votre fichier
-audio = audio.astype(float)  # Convertir en type float pour éviter les problèmes de précision
+fs, audio = wavfile.read("./data/sequence1/audio.wav") 
+audio = audio.astype(float) 
 
 # Paramètres du filtre
 low_cutoff = 300  # Fréquence de coupure du passe-bas (en Hz)
@@ -34,7 +34,7 @@ highpassed_signal = highpass_filter(audio, high_cutoff, fs)
 # Générer les spectrogrammes
 def plot_spectrogram(signal, fs, title, ax):
     f, t, Sxx = spectrogram(signal, fs, nperseg=1024)
-    ax.pcolormesh(t, f, 10 * np.log10(Sxx), shading='gouraud')
+    ax.pcolormesh(t, f, 10 * np.log10(Sxx), shading='inferno')
     ax.set_title(title)
     ax.set_xlabel("Temps (s)")
     ax.set_ylabel("Fréquence (Hz)")

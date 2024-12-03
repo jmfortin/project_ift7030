@@ -7,7 +7,7 @@ import pandas as pd
 
 ############################ PARAMS ############################
   
-DATA_FOLDER = "./data/sequence1"
+DATA_FOLDER = "./data/sequence2"
 POI_FILE = os.path.join(DATA_FOLDER, "trajectory.csv")
 AUDIO_FILE = os.path.join(DATA_FOLDER, "audio.wav")
 
@@ -22,7 +22,7 @@ WIN_LENGTH = 2048
 WINDOW = 'hann'
 CENTER = True
 
-DISPLAY = False
+DISPLAY = True
 SAVE = True
 
 ################################################################
@@ -43,7 +43,8 @@ spec = librosa.stft(
     window=WINDOW, 
     center=CENTER,
 )
-spec_db = librosa.amplitude_to_db(np.abs(spec), ref=np.max)
+spec_db = librosa.amplitude_to_db(np.abs(spec), ref=1.0)
+# spec_db = librosa.amplitude_to_db(np.abs(spec), ref=np.max)
 
 print(f"Spectrogram shape: {spec_db.shape}")
 
@@ -59,7 +60,7 @@ if DISPLAY:
     axs[0].set_xlabel("Time (s)")   
 
     img = librosa.display.specshow(spec_db, ax=axs[1], sr=sample_rate, x_axis='s', y_axis='hz', cmap='inferno')
-    # fig.colorbar(img, ax=axs[1], format='%+2.0f dB')
+    fig.colorbar(img, ax=axs[1], format='%+2.0f dB')
     axs[1].set_title("Spectrogram")
     axs[1].set_xlabel("Time (s)")
     axs[1].set_ylabel("Frequency (Hz)")
@@ -80,7 +81,7 @@ if SAVE:
 
     # Create labels file
     points_of_interest = pd.read_csv(POI_FILE)
-    indices = [np.argmin(np.abs(time_row - timestamp)) for timestamp in points_of_interest["timestamp"]]
+    indices = [np.argmin(np.abs(time_row - timestamp*1e-9)) for timestamp in points_of_interest["timestamp"]]
     labels = spec_db[:, indices]
     pd.DataFrame(labels).to_csv(labels_file, index=False, header=False)
 

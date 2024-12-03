@@ -9,10 +9,10 @@ from torchvision.models import ResNet18_Weights, resnet18, swin_v2_t
 np.set_printoptions(precision=3)
 
 
-class TerrainPatchNet(LightningModule):
+class AudioVisualNet(LightningModule):
 
     def __init__(self, lr=0.0001):
-        super(TerrainPatchNet, self).__init__()
+        super(AudioVisualNet, self).__init__()
 
         self.lr = lr
         torch.manual_seed(42)
@@ -51,19 +51,21 @@ class TerrainPatchNet(LightningModule):
         scheduler.step(metric)
 
 
-class TerrainPatchResNet(TerrainPatchNet):
+class AudioVisualResNet(AudioVisualNet):
 
     def __init__(self, output_size=1, lr=0.0001):
-        super(TerrainPatchResNet, self).__init__(lr=lr)
+        super(AudioVisualResNet, self).__init__(lr=lr)
 
         self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
 
         # Predict a spectrogram of the audio signal
         num_features = self.model.fc.in_features
         self.model.fc  = torch.nn.Sequential(
-            torch.nn.Linear(num_features, 512),
+            torch.nn.Linear(num_features, 4096),
             torch.nn.ReLU(),
-            torch.nn.Linear(512, output_size)
+            torch.nn.Linear(4096, 2048),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2048, output_size),
         )
         self.save_hyperparameters()
 
@@ -72,10 +74,10 @@ class TerrainPatchResNet(TerrainPatchNet):
         return x
 
 
-class TerrainPatchSwin(TerrainPatchNet):
+class AudioVisualSwin(AudioVisualNet):
 
     def __init__(self, output_size=1, lr=0.0001):
-        super(TerrainPatchSwin, self).__init__(lr=lr)
+        super(AudioVisualSwin, self).__init__(lr=lr)
 
         self.model = swin_v2_t(weights="IMAGENET1K_V1")
 
