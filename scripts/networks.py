@@ -57,21 +57,29 @@ class AudioVisualResNet(AudioVisualNet):
         super(AudioVisualResNet, self).__init__(lr=lr)
 
         self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
-
-        # Predict a spectrogram of the audio signal
-        num_features = self.model.fc.in_features
-        self.model.fc  = torch.nn.Sequential(
-            torch.nn.Linear(num_features, 4096),
-            torch.nn.ReLU(),
-            torch.nn.Linear(4096, 2048),
-            torch.nn.ReLU(),
-            torch.nn.Linear(2048, output_size),
-        )
+        self.in_features = self.model.fc.in_features
+        self.replace_head(output_size)
         self.save_hyperparameters()
 
     def forward(self, x):
         x = self.model(x)
         return x
+    
+    def freeze_backbone(self):
+        for param in self.model.parameters():
+            param.requires_grad = False
+        for param in self.model.fc.parameters():
+            param.requires_grad = True
+        self.model.fc.train()
+
+    def replace_head(self, output_size):
+        self.model.fc  = torch.nn.Sequential(
+            torch.nn.Linear(self.in_features, 4096),
+            torch.nn.ReLU(),
+            torch.nn.Linear(4096, 2048),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2048, output_size),
+        )
 
 
 class AudioVisualSwin(AudioVisualNet):
@@ -80,17 +88,26 @@ class AudioVisualSwin(AudioVisualNet):
         super(AudioVisualSwin, self).__init__(lr=lr)
 
         self.model = swin_v2_t(weights="IMAGENET1K_V1")
-
-        # Predict a spectrogram of the audio signal
-        num_features = self.model.head.in_features
-        self.model.head = torch.nn.Sequential(
-            torch.nn.Linear(num_features, 512),
-            torch.nn.ReLU(),
-            torch.nn.Linear(512, output_size)
-        )
-
+        self.in_features = self.model.head.in_features  
+        self.replace_head(output_size)
         self.save_hyperparameters()
 
     def forward(self, x):
         x = self.model(x)
         return x
+    
+    def freeze_backbone(self):
+        for param in self.model.parameters():
+            param.requires_grad = False
+        for param in self.model.head.parameters():
+            param.requires_grad = True
+        self.model.head.train()
+
+    def replace_head(self, output_size):
+        self.model.head = torch.nn.Sequential(
+            torch.nn.Linear(self.in_features, 4096),
+            torch.nn.ReLU(),
+            torch.nn.Linear(4096, 2048),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2048, output_size),
+        )

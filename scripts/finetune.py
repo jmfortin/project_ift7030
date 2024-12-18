@@ -1,7 +1,7 @@
 import argparse
 import os
 from datetime import datetime
-from os.path import dirname, join, realpath
+from os.path import dirname, join, realpath, relpath
 
 import torch
 import wandb
@@ -9,16 +9,21 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint, RichProgressBar
 from pytorch_lightning.loggers import WandbLogger
 
-from datamodules import AudioVisualDataModule
+from datamodules import DownstreamDataModule
 from networks import AudioVisualResNet, AudioVisualSwin
 import yaml
 
 from utils import display_spectograms, inference_on_datamodule
+import matplotlib.pyplot as plt
 
 ############# PARAMETERS #############
 
 SCRIPT_DIR = dirname(realpath(__file__))
-SAVE_PATH = join(SCRIPT_DIR, "..", "output", "training")
+SAVE_PATH = join(SCRIPT_DIR, "..", "output", "finetune")
+CHECKPOINT_PATH = join(SCRIPT_DIR, "..", "output", "training", "2024-12-18_11-59-46")
+# CHECKPOINT_PATH = None 
+FREEZE_BACKBONE = False
+METRIC = "vibration"
 
 PROJECT_NAME = "ift7030"
 NUM_FOLDS = 5  # Number of folds for cross-validation
@@ -36,17 +41,14 @@ DATA_FOLDERS = [
     join(SCRIPT_DIR, "..", "data", "sequence5"),
     join(SCRIPT_DIR, "..", "data", "sequence6"),
 ]
-SAMPLE_FREQ = 4096
+MODEL_TYPE = "ResNet"  # Choose between "ResNet" and "Swin"
 INPUT_SIZE = 256
-OUTPUT_SIZE = SAMPLE_FREQ//2 + 1
+OUTPUT_SIZE = 1
 BATCH_SIZE = 128
 NUM_EPOCHS = 100
 PATIENCE = 10  # Set to NUM_EPOCHS to disable early stopping
 LEARNING_RATE = 0.001
-LOWPASS_FREQ = None
-PCA_DROP = 1
 
-MODEL_TYPE = "ResNet"  # Choose between "CNN", "ResNet" and "Swin"
 DATA_SPLIT = 10  # Number of parts to split the dataset into
 SEED = 42  # Seed for the random split
 
@@ -60,15 +62,13 @@ if __name__ == "__main__":
 
     # Initialize Weights & Biases
     os.environ["WANDB_SILENT"] = "true"
-    tags = [MODEL_TYPE, "pretrain"]
+    tags = [MODEL_TYPE, "finetune"]
 
     # Load the dataset
-    datamodule = AudioVisualDataModule(
+    datamodule = DownstreamDataModule(
         input_size=INPUT_SIZE,
         data_folders=DATA_FOLDERS,
-        sample_freq=SAMPLE_FREQ,
-        lowpass_freq=LOWPASS_FREQ,
-        pca_drop=PCA_DROP,
+        metric=METRIC,
         batch_size=BATCH_SIZE,
         split_ratio=DATA_SPLIT,
         split_seed=SEED,
@@ -81,14 +81,14 @@ if __name__ == "__main__":
 
     # Save details to a YAML file
     details = {
+        "checkpoint_path": CHECKPOINT_PATH,
+        "freeze": FREEZE_BACKBONE,
+        "metric": METRIC,
         "data_folders": DATA_FOLDERS,
-        "sample_freq": SAMPLE_FREQ,
         "input_size": INPUT_SIZE,
         "output_size": OUTPUT_SIZE,
         "batch_size": BATCH_SIZE,
         "learning_rate": LEARNING_RATE,
-        "pca_drop": PCA_DROP,
-        "lowpass_freq": LOWPASS_FREQ,
         "model_type": MODEL_TYPE,
         "data_split": DATA_SPLIT,
         "seed": SEED,
@@ -106,15 +106,31 @@ if __name__ == "__main__":
             fold_save_folder = join(save_folder, f"fold_{k+1}")
         else:
             fold_save_folder = save_folder
-        print(f"Saving to {fold_save_folder}")
 
-        # Create an instance of the selected model
-        if MODEL_TYPE == "ResNet":
-            model = AudioVisualResNet(output_size=OUTPUT_SIZE, lr=LEARNING_RATE)
-        elif MODEL_TYPE == "Swin":
-            model = AudioVisualSwin(output_size=OUTPUT_SIZE, lr=LEARNING_RATE)
+        # Load the checkpoint (if provided)
+        if CHECKPOINT_PATH is not None:
+            ckpt_path = join(CHECKPOINT_PATH, f"fold_{k+1}", "model.ckpt")
+            print(f"Loading checkpoint from {relpath(ckpt_path, SCRIPT_DIR)}")
+            ckpt_details = yaml.safe_load(open(join(CHECKPOINT_PATH, "details.yaml"), "r"))
+            if ckpt_details["model_type"] == "ResNet":
+                model = AudioVisualResNet.load_from_checkpoint(ckpt_path)
+            elif ckpt_details["model_type"] == "Swin":
+                model = AudioVisualSwin.load_from_checkpoint(ckpt_path)
+            else:
+                raise ValueError("Invalid model type.")
         else:
-            raise ValueError("Invalid model type.")
+            print("No checkpoint provided. Creating a new model.")
+            if MODEL_TYPE == "ResNet":
+                model = AudioVisualResNet(output_size=OUTPUT_SIZE, lr=LEARNING_RATE)
+            elif MODEL_TYPE == "Swin":
+                model = AudioVisualSwin(output_size=OUTPUT_SIZE, lr=LEARNING_RATE)
+            else:
+                raise ValueError("Invalid model type.")
+
+        # Freeze the model and replace the head
+        model.replace_head(OUTPUT_SIZE)
+        if FREEZE_BACKBONE:
+            model.freeze_backbone()
 
         # Define logger
         logger = WandbLogger(
@@ -152,11 +168,12 @@ if __name__ == "__main__":
         labels, outputs = inference_on_datamodule(model, datamodule, device)
 
         # Plot the output and label and save the plots
-        display_spectograms(
-            specs=[labels, outputs], sample_freq=details["sample_freq"], 
-            titles=["Labels", "Predictions"], 
-            save_path=join(fold_save_folder, "predictions.png")
-        )
+        fig = plt.figure(figsize=(12, 6))
+        plt.plot(labels[0, :], label="Labels")
+        plt.plot(outputs[0, :], label="Predictions")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(join(fold_save_folder, "predictions.png"))
 
         # Save the model as a TorchScript file
         best_checkpoint = torch.load(join(fold_save_folder, "model.ckpt"), weights_only=True)
