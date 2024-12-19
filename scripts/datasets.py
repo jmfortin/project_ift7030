@@ -178,11 +178,10 @@ class DownstreamDataset(BaseDataset):
 
         trajectory_file = join(folder_path, "trajectory.csv")
         trajectory = pd.read_csv(trajectory_file).iloc[valid_ids]
-        timestamps = (trajectory["timestamp"] - trajectory["timestamp"].iloc[0]) / 1e9
         indices = np.array(
             [
                 np.argmin(np.abs(metric_df["timestamp"] - timestamp))
-                for timestamp in timestamps
+                for timestamp in trajectory["timestamp"]
             ]
         )
         labels = metric_df["metric"][indices].values
