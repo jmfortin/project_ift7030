@@ -107,6 +107,8 @@ if __name__ == "__main__":
         else:
             fold_save_folder = save_folder
 
+        print(f"Saving to {fold_save_folder}")
+
         # Load the checkpoint (if provided)
         if CHECKPOINT_PATH is not None:
             ckpt_path = join(CHECKPOINT_PATH, f"fold_{k+1}", "model.ckpt")
