@@ -12,7 +12,7 @@ pip install -r requirements.txt
 ```
 
 ### Téléchargement des données
-Comme le jeu de données est assez gros, on vous fournit ici une seule séquence pour tester le code. Vous pouvez télécharger la séquence via [ce lien](https://ulavaldti-my.sharepoint.com/:u:/g/personal/jmfor48_ulaval_ca/Ed0nMZp24qxHgQxycfi2DigBOGzoGDLVFfT0VZi_4VcZmw?e=kU5Jnk). Il faut ensuite l'extraire dans le dossier `data`.
+Comme le jeu de données est assez gros, on vous fournit ici une seule séquence pour tester le code. Vous pouvez télécharger la séquence via [ce lien](https://ulavaldti-my.sharepoint.com/:u:/g/personal/jmfor48_ulaval_ca/Ed0nMZp24qxHgQxycfi2DigBg_0p4Aq-iiD6bD0Voky17g?e=hSeIeR). Il faut ensuite l'extraire dans le dossier `data`.
 
 ### Pré-entraînement sur le spectrogramme audio
 Il suffit d'exécuter le script suivant, en ajustant les paramètres au besoin :
