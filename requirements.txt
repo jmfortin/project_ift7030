@@ -6,8 +6,10 @@ opencv-python
 matplotlib
 pandas
 pytorch-lightning
+pyyaml
 rich
 scikit-learn
+scipy
 torch
 torchaudio
 torchvision

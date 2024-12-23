@@ -77,34 +77,6 @@ def display_spectograms(specs, sample_freq, titles, x_axis='s', y_axis='hz', cma
         plt.show()
 
 
-def inference_on_datamodule(model, datamodule, device):
-
-    model.eval()
-    model.to(device)
-    
-    all_labels = np.array([])
-    all_outputs = np.array([])
-    for batch in datamodule.test_dataloader():
-        inputs, labels = batch
-        inputs = inputs.to(device).float()
-        labels = labels.to(device).float()
-
-        with torch.no_grad():
-            outputs = model(inputs)
-
-        # Transpose the outputs and labels
-        outputs = outputs.permute(1, 0).cpu().numpy()
-        labels = labels.permute(1, 0).cpu().numpy()
-        if all_labels.size == 0:
-            all_labels = labels
-            all_outputs = outputs
-        else:
-            all_labels = np.hstack((all_labels, labels))
-            all_outputs = np.hstack((all_outputs, outputs))
-
-    return all_labels, all_outputs
-
-
 def compute_vibration(imu_data, freq_range=[1, 30], window_duration=1.0):
     """
     Compute the vibration metric based on z-axis acceleration.

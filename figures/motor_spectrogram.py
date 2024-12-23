@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import librosa
 import librosa.display
 import numpy as np
-import os
-import pandas as pd
 
 ############################ PARAMS ############################
 

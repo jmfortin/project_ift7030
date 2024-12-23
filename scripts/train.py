@@ -13,41 +13,43 @@ from datamodules import AudioVisualDataModule
 from networks import AudioVisualResNet, AudioVisualSwin
 import yaml
 
-from utils import display_spectograms, inference_on_datamodule
+from inference import inference_on_datamodule
+from utils import display_spectograms
 
 ############# PARAMETERS #############
 
 SCRIPT_DIR = dirname(realpath(__file__))
 SAVE_PATH = join(SCRIPT_DIR, "..", "output", "training")
 
-PROJECT_NAME = "ift7030"
-NUM_FOLDS = 5  # Number of folds for cross-validation
-
 parser = argparse.ArgumentParser(description="Train model for audio prediction from terrain patches.")
-parser.add_argument("--folds", type=int, help="Number of folds for cross-validation.", default=NUM_FOLDS)
-parser.add_argument("--project", type=str, help="WandB project name.", default=PROJECT_NAME)
+parser.add_argument("--folds", type=int, help="Number of folds for cross-validation.", default=5)
+parser.add_argument("--project", type=str, help="WandB project name.", default="ift7030")
+parser.add_argument("--pca_drop", type=int, help="Number of principal components to drop.", default=0)
+parser.add_argument("--lowpass_freq", type=int, help="Low-pass frequency for filtering.", default=None)
 args = parser.parse_args()
 
+PROJECT_NAME = args.project
+NUM_FOLDS = args.folds  # Number of folds for cross-validation
 DATA_FOLDERS = [
     join(SCRIPT_DIR, "..", "data", "sequence1"),
-    join(SCRIPT_DIR, "..", "data", "sequence2"),
-    join(SCRIPT_DIR, "..", "data", "sequence3"),
-    join(SCRIPT_DIR, "..", "data", "sequence4"),
-    join(SCRIPT_DIR, "..", "data", "sequence5"),
-    join(SCRIPT_DIR, "..", "data", "sequence6"),
+    # join(SCRIPT_DIR, "..", "data", "sequence2"),
+    # join(SCRIPT_DIR, "..", "data", "sequence3"),
+    # join(SCRIPT_DIR, "..", "data", "sequence4"),
+    # join(SCRIPT_DIR, "..", "data", "sequence5"),
+    # join(SCRIPT_DIR, "..", "data", "sequence6"),
 ]
 SAMPLE_FREQ = 4096
 INPUT_SIZE = 256
 OUTPUT_SIZE = SAMPLE_FREQ//2 + 1
 BATCH_SIZE = 128
 NUM_EPOCHS = 100
-PATIENCE = 10  # Set to NUM_EPOCHS to disable early stopping
+PATIENCE = 20  # Set to NUM_EPOCHS to disable early stopping
 LEARNING_RATE = 0.001
-LOWPASS_FREQ = None
-PCA_DROP = 1
+LOWPASS_FREQ = args.lowpass_freq
+PCA_DROP = args.pca_drop
 
-MODEL_TYPE = "ResNet"  # Choose between "CNN", "ResNet" and "Swin"
-DATA_SPLIT = 10  # Number of parts to split the dataset into
+MODEL_TYPE = "ResNet"  # Choose between "ResNet" and "Swin"
+DATA_SPLIT = 10  # Number of parts to split the dataset into       
 SEED = 42  # Seed for the random split
 
 ######################################

@@ -13,40 +13,48 @@ from datamodules import DownstreamDataModule
 from networks import AudioVisualResNet, AudioVisualSwin
 import yaml
 
-from utils import display_spectograms, inference_on_datamodule
+from inference import inference_on_datamodule
 import matplotlib.pyplot as plt
 
 ############# PARAMETERS #############
 
 SCRIPT_DIR = dirname(realpath(__file__))
+OUTPUT_DIR = join(SCRIPT_DIR, "..", "output", "training")
 SAVE_PATH = join(SCRIPT_DIR, "..", "output", "finetune")
-CHECKPOINT_PATH = join(SCRIPT_DIR, "..", "output", "training", "2024-12-18_11-59-46")
-# CHECKPOINT_PATH = None 
-FREEZE_BACKBONE = False
-METRIC = "vibration"
-
-PROJECT_NAME = "ift7030"
-NUM_FOLDS = 5  # Number of folds for cross-validation
 
 parser = argparse.ArgumentParser(description="Train model for audio prediction from terrain patches.")
-parser.add_argument("--folds", type=int, help="Number of folds for cross-validation.", default=NUM_FOLDS)
-parser.add_argument("--project", type=str, help="WandB project name.", default=PROJECT_NAME)
+parser.add_argument("--folds", type=int, help="Number of folds for cross-validation.", default=5)
+parser.add_argument("--project", type=str, help="WandB project name.", default="ift7030")
+parser.add_argument("--checkpoint", type=str, help="Path to a checkpoint to load.", default=None)
+parser.add_argument("--latest", action="store_true", help="Use the latest checkpoint.")
+parser.add_argument("--freeze", action="store_true", help="Freeze the backbone.")
+parser.add_argument("--metric", type=str, help="Metric to use for training.", default="vibration")
 args = parser.parse_args()
+
+if args.latest:
+    latest_dir = max(os.listdir(OUTPUT_DIR), key=lambda d: datetime.strptime(d, "%Y-%m-%d_%H-%M-%S"))
+    CHECKPOINT_PATH = join(OUTPUT_DIR, latest_dir)
+else:
+    CHECKPOINT_PATH = args.checkpoint
+FREEZE_BACKBONE = args.freeze   
+METRIC = args.metric
+PROJECT_NAME = args.project
+NUM_FOLDS = args.folds  # Number of folds for cross-validation  
 
 DATA_FOLDERS = [
     join(SCRIPT_DIR, "..", "data", "sequence1"),
-    join(SCRIPT_DIR, "..", "data", "sequence2"),
-    join(SCRIPT_DIR, "..", "data", "sequence3"),
-    join(SCRIPT_DIR, "..", "data", "sequence4"),
-    join(SCRIPT_DIR, "..", "data", "sequence5"),
-    join(SCRIPT_DIR, "..", "data", "sequence6"),
+    # join(SCRIPT_DIR, "..", "data", "sequence2"),
+    # join(SCRIPT_DIR, "..", "data", "sequence3"),
+    # join(SCRIPT_DIR, "..", "data", "sequence4"),
+    # join(SCRIPT_DIR, "..", "data", "sequence5"),
+    # join(SCRIPT_DIR, "..", "data", "sequence6"),
 ]
 MODEL_TYPE = "ResNet"  # Choose between "ResNet" and "Swin"
 INPUT_SIZE = 256
 OUTPUT_SIZE = 1
 BATCH_SIZE = 128
 NUM_EPOCHS = 100
-PATIENCE = 10  # Set to NUM_EPOCHS to disable early stopping
+PATIENCE = 100  # Set to NUM_EPOCHS to disable early stopping
 LEARNING_RATE = 0.001
 
 DATA_SPLIT = 10  # Number of parts to split the dataset into
@@ -141,6 +149,14 @@ if __name__ == "__main__":
             save_dir=fold_save_folder,
             name=f"{time_str}_fold_{k+1}",
             tags=tags,
+        )
+        logger.experiment.config.update(
+            {
+                "model_type": MODEL_TYPE,
+                "freeze": FREEZE_BACKBONE,
+                "metric": METRIC,
+                "checkpoint": True if CHECKPOINT_PATH is not None else False,
+            }
         )
 
         # Define callbacks

@@ -104,13 +104,13 @@ class BaseDataset(Dataset):
 class AudioVisualDataset(BaseDataset):
 
     def __init__(
-        self, data_folders, sample_freq, lowpass_freq=300, pca_drop=0, transform=None
+        self, data_folders, sample_freq, lowpass_freq=0, pca_drop=0, transform=None
     ):
         """
         Args:
             data_folders: The folders containing the dataset
             sample_freq: The sample frequency of the audio files
-            lowpass_freq: The frequency to use for the low-pass (ignore if None)
+            lowpass_freq: The frequency to use for the low-pass (ignore if 0)
             pca_drop: The number of principal components to remove from the labels
             transform: The transformations to apply to the images
         """
@@ -125,7 +125,7 @@ class AudioVisualDataset(BaseDataset):
         audio_file = join(folder_path, "audio.wav")
         trajectory_file = join(folder_path, "trajectory.csv")
         wav = load_audio(audio_file, self.sample_freq)
-        if self.lowpass_freq:
+        if self.lowpass_freq > 0:
             wav = lowpass_filter(wav, self.lowpass_freq, self.sample_freq)
         trajectory = pd.read_csv(trajectory_file).iloc[valid_ids]
 
@@ -145,15 +145,7 @@ class AudioVisualDataset(BaseDataset):
         self.labels = np.hstack(self.labels)
         if self.pca_drop > 0:
             self.labels = remove_principal_components(self.labels, self.pca_drop)
-        # self.normalize_labels()
-
-        # Display the labels as a spectrogram
-        # import librosa.display
-        # import matplotlib.pyplot as plt
-
-        # librosa.display.specshow(self.labels, sr=self.sample_freq, x_axis='s', y_axis='hz', cmap='inferno')
-        # plt.title("Labels Spectrogram")
-        # plt.show()
+        self.normalize_labels()
 
 
 class DownstreamDataset(BaseDataset):

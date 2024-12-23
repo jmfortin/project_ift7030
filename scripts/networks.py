@@ -56,7 +56,7 @@ class AudioVisualResNet(AudioVisualNet):
     def __init__(self, output_size=1, lr=0.0001):
         super(AudioVisualResNet, self).__init__(lr=lr)
 
-        self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.model = resnet18(pretrained=False)
         self.in_features = self.model.fc.in_features
         self.replace_head(output_size)
         self.save_hyperparameters()
@@ -87,7 +87,7 @@ class AudioVisualSwin(AudioVisualNet):
     def __init__(self, output_size=1, lr=0.0001):
         super(AudioVisualSwin, self).__init__(lr=lr)
 
-        self.model = swin_v2_t(weights="IMAGENET1K_V1")
+        self.model = swin_v2_t()
         self.in_features = self.model.head.in_features  
         self.replace_head(output_size)
         self.save_hyperparameters()

@@ -1,18 +1,32 @@
-# Projet IFT-7030
-Projet du cours IFT-7030 - Prédiction de spectre audio à partir d'images de terrain
+## Projet IFT-7030
+Projet du cours IFT-7030 - Prédiction audio-visuelle pour la navigation autonome hors-route
+Par Jean-Michel Fortin, Ismaël Baldé et Hamed Soumahoro
 
-## Sous-projet 1: Séparation de source audio
+### Installer les dépendances
+Exécutez la commande suivante dans votre terminal :
 
-L'objectif est de séparer le bruit causé par les moteurs du véhicules du son résultant de l'interaction entre les roues et le sol. 
-Ça revient à de la séparation de source, mais on n'a pas le ground truth parfait pour chaque séquence.
-On peut envisager générer un signal audio des moteurs à vide (donc sans contact entre le roues et le sol) afin de guider la séparation. 
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-## Sous-projet 2: Prédiction audio à partir d'images
+### Téléchargement des données
+Comme le jeu de données est assez gros, on vous fournit ici une seule séquence pour tester le code. Vous pouvez télécharger la séquence via [ce lien](https://ulavaldti-my.sharepoint.com/:u:/g/personal/jmfor48_ulaval_ca/Ed0nMZp24qxHgQxycfi2DigBOGzoGDLVFfT0VZi_4VcZmw?e=kU5Jnk). Il faut ensuite l'extraire dans le dossier `data`.
 
-L'objectif est de prédire un spectrogramme audio correspondant à la traversée d'un terrain représenté par une image aérienne. 
-L'image suivante représente ce qu'il y a à faire: 
+### Pré-entraînement sur le spectrogramme audio
+Il suffit d'exécuter le script suivant, en ajustant les paramètres au besoin :
 
-![diagram_ift7030](https://github.com/user-attachments/assets/3b44c1c3-bc4a-43ca-9b6a-457ddae712fb)
+```bash
+python3 scripts/train.py --project ift7030 --folds 5 --pca_drop 1 --lowpass_freq 0
+```
 
-Au final, il faut sélectionner un réseau de neurones représenté par les blocs bleus dans le diagramme.
-Commençons par une architecture simple et augmentons graduellement vers plus complexe au besoin. 
+### Adaptation pour la prédiction de vibrations
+L'exécution du script utilisera le dernier checkpoint de pré-entraînement disponible:
+
+```bash
+python3 scripts/finetune.py --project ift7030 --folds 5 --latest --freeze --metric vibration
+```
+
+### Autres scripts
+Le reste du code montre les expériences réalisées sur les données et les scripts permettant de générer les figures présentées dans le rapport. 

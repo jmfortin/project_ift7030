@@ -16,7 +16,7 @@ class AudioVisualDataModule(LightningDataModule):
         batch_size,
         data_folders,
         sample_freq, 
-        lowpass_freq=None,
+        lowpass_freq=0,
         pca_drop=0,
         split_ratio=10,
         split_seed=42,
@@ -27,7 +27,7 @@ class AudioVisualDataModule(LightningDataModule):
             input_size: The size of the input images
             data_folders: The folders containing the dataset
             sample_freq: The sample frequency of the audio files
-            lowpass_freq: The frequency to use for the low-pass (ignore if None)
+            lowpass_freq: The frequency to use for the low-pass (ignore if 0)
             pca_drop: The number of principal components to remove from the labels
             batch_size: The batch size to use for training
             split_ratio: The number of parts to split the dataset into (default=10)
@@ -58,10 +58,6 @@ class AudioVisualDataModule(LightningDataModule):
         pass
 
     def setup(self, stage: str):
-        print("------------------------------------------------------")
-        print(f"K: {self.k}")
-        print("------------------------------------------------------")
-
         train_indices, val_indices = self.splits[self.k]
         self.train_data = Subset(self.full_dataset, train_indices)
         self.val_data = Subset(self.full_dataset, val_indices)
@@ -121,10 +117,6 @@ class DownstreamDataModule(LightningDataModule):
         pass
 
     def setup(self, stage: str):
-        print("------------------------------------------------------")
-        print(f"K: {self.k}")
-        print("------------------------------------------------------")
-
         train_indices, val_indices = self.splits[self.k]
         self.train_data = Subset(self.full_dataset, train_indices)
         self.val_data = Subset(self.full_dataset, val_indices)
